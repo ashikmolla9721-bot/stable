@@ -19,19 +19,23 @@ workflows:
           flutter --version
           flutter config --no-analytics
 
-          # Force clean and regenerate Android v2 embedding platform files
+          # 1. Force clean and regenerate Android v2 embedding platform files
           rm -rf android
           flutter create . --org com.ashik --project-name ashik_hisab --platforms android
 
-          # Bengali launcher name
+          # 2. Bengali launcher name
           if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
             sed -i.bak 's/android:label="ashik_hisab"/android:label="আশিক হিসাব"/' android/app/src/main/AndroidManifest.xml
           fi
 
-          # Fix compileSdk version to 36 to satisfy file_picker and android_lifecycle
+          # 3. FORCE compileSdk to 36 right after creation (Prevents file_picker & lifecycle conflict)
           if [ -f "android/app/build.gradle" ]; then
             sed -i.bak 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 36/g' android/app/build.gradle
             sed -i.bak 's/compileSdk [0-9]*/compileSdk 36/g' android/app/build.gradle
+            # Extra safeguard: explicitly inject compileSdk 36 inside android block if missing
+            if ! grep -q "compileSdk 36" android/app/build.gradle; then
+              sed -i.bak '/defaultConfig {/a \    compileSdk 36' android/app/build.gradle
+            fi
           fi
 
           # Give Gradle enough memory
@@ -50,7 +54,7 @@ workflows:
             cd ashik_hisab
           fi
 
-          # Final verification to enforce compileSdk 36
+          # Absolute final check before building APK
           if [ -f "android/app/build.gradle" ]; then
             sed -i.bak 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 36/g' android/app/build.gradle
             sed -i.bak 's/compileSdk [0-9]*/compileSdk 36/g' android/app/build.gradle
